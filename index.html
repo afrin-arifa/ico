@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Batch Converter & Optimizer</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+</head>
+
+<body class="p-4 md:p-8 min-h-screen flex items-start justify-center">
+
+    <div class="container mx-auto w-full">
+        <header class="text-center mb-10">
+            <h1 class="text-3xl font-extrabold text-gray-900">Batch Image Optimizer</h1>
+            <p class="text-gray-500 mt-1">Convert and compress up to 100 images (JPG, PNG, WebP) right in your browser.
+            </p>
+        </header>
+
+        <div id="app" class="bg-white p-6 md:p-10 rounded-xl shadow-custom transition-all duration-300">
+
+            <!-- Upload & Settings Section -->
+            <section class="mb-8">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4">1. Select Images & Settings</h2>
+
+                <!-- File Input / Drop Area -->
+                <div id="dropArea"
+                    class="drop-area p-8 text-center rounded-lg cursor-pointer hover:bg-gray-50 mb-6 transition-colors">
+                    <input type="file" id="imageInput" accept="image/jpeg, image/png, image/webp" multiple
+                        class="hidden">
+                    <p class="text-gray-600 font-medium">Drag & Drop Images Here</p>
+                    <p class="text-sm text-gray-400">or click to select files (Max 100)</p>
+                </div>
+
+                <!-- Image Preview Area -->
+                <div id="previewArea"
+                    class="mt-4 p-4 border border-gray-200 rounded-lg bg-gray-50 max-h-64 overflow-y-auto hidden">
+                    <p class="text-sm text-gray-500 font-semibold mb-3">Selected Images (Click 'Convert' next to an
+                        image for single processing):</p>
+                    <div id="previewList" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                        <!-- Previews will be inserted here by JavaScript -->
+                    </div>
+                </div>
+                <!-- END NEW -->
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                    <!-- Target Format (Radio Buttons) -->
+                    <fieldset>
+                        <legend class="block text-sm font-medium text-gray-700 mb-2">Target Format</legend>
+                        <div id="formatRadios" class="flex flex-wrap gap-3">
+
+                            <!-- WebP Radio -->
+                            <label
+                                class="flex items-center space-x-2 p-2 bg-gray-100 rounded-xl cursor-pointer has-[:checked]:bg-blue-100 has-[:checked]:ring-2 has-[:checked]:ring-blue-500 transition border border-gray-200">
+                                <input type="radio" name="targetFormat" value="image/webp" checked
+                                    class="form-radio h-4 w-4 text-blue-600 focus:ring-blue-500">
+                                <span class="text-sm font-medium text-gray-700">WebP (.webp)</span>
+                            </label>
+
+                            <!-- JPEG Radio -->
+                            <label
+                                class="flex items-center space-x-2 p-2 bg-gray-100 rounded-xl cursor-pointer has-[:checked]:bg-blue-100 has-[:checked]:ring-2 has-[:checked]:ring-blue-500 transition border border-gray-200">
+                                <input type="radio" name="targetFormat" value="image/jpeg"
+                                    class="form-radio h-4 w-4 text-blue-600 focus:ring-blue-500">
+                                <span class="text-sm font-medium text-gray-700">JPEG (.jpg)</span>
+                            </label>
+
+                            <!-- PNG Radio -->
+                            <label
+                                class="flex items-center space-x-2 p-2 bg-gray-100 rounded-xl cursor-pointer has-[:checked]:bg-blue-100 has-[:checked]:ring-2 has-[:checked]:ring-blue-500 transition border border-gray-200">
+                                <input type="radio" name="targetFormat" value="image/png"
+                                    class="form-radio h-4 w-4 text-blue-600 focus:ring-blue-500">
+                                <span class="text-sm font-medium text-gray-700">PNG (.png)</span>
+                            </label>
+
+                        </div>
+                    </fieldset>
+
+                    <!-- Quality Slider -->
+                    <div>
+                        <label id="qualityLabel" for="qualitySlider"
+                            class="block text-sm font-medium text-gray-700 mb-2 flex justify-between">
+                            <span>Quality (0 - 100)</span>
+                            <span id="qualityValue" class="font-bold text-blue-600">85</span>
+                        </label>
+                        <input type="range" id="qualitySlider" min="1" max="100" value="85"
+                            class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer range-lg">
+                        <p id="qualityHint" class="text-xs text-gray-500 mt-1">80-90 is usually optimal for web
+                            compression.</p>
+                    </div>
+                </div>
+
+                <!-- MAIN BATCH CONVERSION BUTTON -->
+                <button id="convertButton"
+                    class="w-full mt-8 py-3 px-4 bg-purple-600 text-white font-semibold rounded-lg shadow-lg hover:bg-purple-700 transition-colors duration-200 disabled:opacity-50"
+                    disabled>
+                    Process All 0 Images
+                </button>
+            </section>
+
+            <!-- Status and Results Section -->
+            <section class="mt-8 pt-6 border-t border-gray-100">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4">2. Processing & Results</h2>
+
+                <!-- Status Indicator -->
+                <div id="statusArea" class="mb-6 hidden">
+                    <div class="flex justify-between items-center text-sm font-medium text-gray-700 mb-1">
+                        <span id="processingText">Ready to process...</span>
+                        <span id="progressIndicator">0%</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2.5">
+                        <div id="progressBar" class="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
+                            style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <!-- Download Area -->
+                <div id="resultsArea" class="space-y-3 max-h-96 overflow-y-auto">
+                    <p id="initialMessage" class="text-gray-400 italic text-center p-4">Uploaded images will appear here
+                        after processing.</p>
+                </div>
+
+                <button id="downloadAllButton"
+                    class="w-full mt-4 py-3 px-4 bg-green-500 text-white font-semibold rounded-lg shadow-lg hover:bg-green-600 transition-colors duration-200 disabled:opacity-50 hidden"
+                    disabled>
+                    Download All Processed Images (.zip)
+                </button>
+
+                <!-- Canvas for processing -->
+                <canvas id="processingCanvas"></canvas>
+            </section>
+
+        </div>
+
+        <footer class="text-center text-sm text-gray-400 mt-8">
+            Processing is done entirely in your browser. No data is sent to a server.
+        </footer>
+    </div>
+
+    <script>
+        // Constants and Configuration
+        const MAX_FILES = 100;
+        const MODEL_NAME = 'gemini-2.5-flash-preview-09-2025';
+        const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent`;
+        const API_KEY = ""; // This will be automatically populated by the environment.
+
+        // Global array to hold file objects
+        let selectedFiles = [];
+
+        // Global array to hold successful processed file objects (for ZIP)
+        window.processedFiles = [];
+
+        /**
+         * Converts the source image file using Canvas API to the target format/quality.
+         * @param {File} file - The source image file.
+         * @param {string} mimeType - The target MIME type (e.g., 'image/webp').
+         * @param {number} quality - Compression quality (1-100).
+         * @returns {Promise<Blob>} A Promise that resolves with the processed Blob.
+         */
+        function processImage(file, mimeType, quality) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        try {
+                            const canvas = document.getElementById('processingCanvas');
+                            const ctx = canvas.getContext('2d');
+
+                            canvas.width = img.naturalWidth;
+                            canvas.height = img.naturalHeight;
+
+                            ctx.clearRect(0, 0, canvas.width, canvas.height);
+                            ctx.drawImage(img, 0, 0);
+
+                            const qualityFloat = quality / 100;
+
+                            canvas.toBlob((blob) => {
+                                if (blob) {
+                                    resolve(blob);
+                                } else {
+                                    reject(new Error('Failed to create Blob. Check browser support or image type.'));
+                                }
+                            }, mimeType, mimeType === 'image/png' ? undefined : qualityFloat);
+                        } catch (error) {
+                            reject(error);
+                        }
+                    };
+                    img.onerror = () => reject(new Error('Could not load image file.'));
+                    img.src = event.target.result;
+                };
+                reader.onerror = (error) => reject(error);
+                reader.readAsDataURL(file);
+            });
+        }
+
+        /**
+         * Gets the currently selected output format (MIME type) from radio buttons.
+         */
+        function getSelectedFormat() {
+            const checkedRadio = document.querySelector('input[name="targetFormat"]:checked');
+            return checkedRadio ? checkedRadio.value : 'image/webp'; // Default
+        }
+
+        // Main application logic
+        document.addEventListener('DOMContentLoaded', () => {
+            const imageInput = document.getElementById('imageInput');
+            const qualitySlider = document.getElementById('qualitySlider');
+            const qualityValueSpan = document.getElementById('qualityValue');
+            const qualityHint = document.getElementById('qualityHint');
+            const convertButton = document.getElementById('convertButton');
+            const dropArea = document.getElementById('dropArea');
+            const resultsArea = document.getElementById('resultsArea');
+            const initialMessage = document.getElementById('initialMessage');
+            const statusArea = document.getElementById('statusArea');
+            const processingText = document.getElementById('processingText');
+            const progressBar = document.getElementById('progressBar');
+            const progressIndicator = document.getElementById('progressIndicator');
+            const downloadAllButton = document.getElementById('downloadAllButton');
+            const formatRadios = document.querySelectorAll('input[name="targetFormat"]');
+            const previewArea = document.getElementById('previewArea');
+            const previewList = document.getElementById('previewList');
+
+            // Expose function globally for use in inline onclick attribute
+            window.startSingleConversion = startSingleConversion;
+
+
+            // --- UI Event Handlers ---
+
+            // Drag and Drop implementation
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropArea.addEventListener(eventName, preventDefaults, false);
+                document.body.addEventListener(eventName, preventDefaults, false);
+            });
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropArea.addEventListener(eventName, () => dropArea.classList.add('drop-area-active'), false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropArea.addEventListener(eventName, () => dropArea.classList.remove('drop-area-active'), false);
+            });
+
+            dropArea.addEventListener('drop', handleDrop, false);
+            dropArea.addEventListener('click', () => imageInput.click(), false);
+
+            imageInput.addEventListener('change', (e) => handleFileSelection(e.target.files));
+
+            qualitySlider.addEventListener('input', () => {
+                const value = qualitySlider.value;
+                qualityValueSpan.textContent = value;
+                updateQualityControl(getSelectedFormat());
+            });
+
+            formatRadios.forEach(radio => {
+                radio.addEventListener('change', (e) => {
+                    updateQualityControl(e.target.value);
+                });
+            });
+
+            convertButton.addEventListener('click', startBatchConversion);
+            downloadAllButton.addEventListener('click', downloadAll);
+
+
+            // --- Utility and File Handling Functions ---
+
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            function handleDrop(e) {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                handleFileSelection(files);
+            }
+
+            function updateQualityControl(mimeType) {
+                if (mimeType === 'image/png') {
+                    qualitySlider.disabled = true;
+                    qualityValueSpan.textContent = 'N/A';
+                    qualityHint.textContent = 'PNG is lossless. Quality setting is ignored.';
+                    qualityHint.classList.remove('text-gray-500');
+                    qualityHint.classList.add('text-orange-500');
+                    document.getElementById('qualityLabel').classList.add('opacity-50');
+                } else {
+                    qualitySlider.disabled = false;
+                    qualityValueSpan.textContent = qualitySlider.value;
+                    qualityHint.textContent = `${mimeType === 'image/webp' ? 'WebP' : 'JPEG'} compression quality. 80-90 is usually optimal for web.`;
+                    qualityHint.classList.add('text-gray-500');
+                    qualityHint.classList.remove('text-orange-500');
+                    document.getElementById('qualityLabel').classList.remove('opacity-50');
+                }
+            }
+
+            function handleFileSelection(files) {
+                selectedFiles = Array.from(files).filter(file => file.type.startsWith('image/')).slice(0, MAX_FILES);
+
+                convertButton.textContent = `Process All ${selectedFiles.length} Image${selectedFiles.length === 1 ? '' : 's'}`;
+                convertButton.disabled = selectedFiles.length === 0;
+
+                // Reset results area and status
+                resultsArea.innerHTML = '';
+                initialMessage.classList.remove('hidden');
+                downloadAllButton.classList.add('hidden');
+                window.processedFiles = [];
+
+                // Update preview area
+                previewList.innerHTML = '';
+                if (selectedFiles.length > 0) {
+                    previewArea.classList.remove('hidden');
+                    selectedFiles.forEach((file, index) => {
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            const fileSizeKB = (file.size / 1024).toFixed(1);
+                            const previewItem = document.createElement('div');
+                            previewItem.id = `preview-${index}`;
+                            previewItem.className = 'flex flex-col items-center bg-white p-2 rounded-lg shadow-sm hover:shadow-md transition';
+
+                            // Add single convert button
+                            previewItem.innerHTML = `
+                            <img src="${e.target.result}" class="w-full h-16 object-cover rounded-md mb-1 border border-gray-200" alt="${file.name}">
+                            <p class="text-xs font-medium text-gray-700 w-full truncate text-center" title="${file.name}">${file.name}</p>
+                            <p class="text-[10px] text-gray-400 mb-2">${fileSizeKB} KB</p>
+                            <button onclick="startSingleConversion(${index})" class="w-full py-1 text-[10px] font-semibold text-blue-600 bg-blue-100 rounded-full hover:bg-blue-200 transition">
+                                Convert Single
+                            </button>
+                        `;
+                            previewList.appendChild(previewItem);
+                        };
+                        reader.readAsDataURL(file);
+                    });
+                } else {
+                    previewArea.classList.add('hidden');
+                }
+
+                if (selectedFiles.length > MAX_FILES) {
+                    alertUser(`Only the first ${MAX_FILES} images will be processed.`);
+                }
+            }
+
+
+            // --- Conversion Logic ---
+
+            /**
+             * Converts a single image file selected from the preview list.
+             * @param {number} index - Index of the file in the selectedFiles array.
+             */
+            async function startSingleConversion(index) {
+                const file = selectedFiles[index];
+                if (!file) return;
+
+                // UI feedback for single conversion
+                const singleButton = document.querySelector(`#preview-${index} button`);
+                const originalText = singleButton.textContent;
+                singleButton.textContent = 'Processing...';
+                singleButton.disabled = true;
+
+                try {
+                    const targetMimeType = getSelectedFormat();
+                    const quality = parseInt(qualitySlider.value, 10);
+                    const targetExtension = targetMimeType.split('/')[1].replace('jpeg', 'jpg');
+
+                    const blob = await processImage(file, targetMimeType, quality);
+
+                    const newName = file.name.replace(/\.[^/.]+$/, "") + '.' + targetExtension;
+
+                    // Add to global processed list if it's a new or updated entry
+                    const existingIndex = window.processedFiles.findIndex(f => f.originalName === file.name);
+                    const processedFile = { name: newName, blob: blob, originalName: file.name };
+
+                    if (existingIndex > -1) {
+                        window.processedFiles[existingIndex] = processedFile;
+                    } else {
+                        window.processedFiles.push(processedFile);
+                    }
+
+                    // Ensure the initial message is hidden and show results
+                    initialMessage.classList.add('hidden');
+                    downloadAllButton.classList.remove('hidden');
+
+                    // Display result (will overwrite/update existing result for this file)
+                    displayResult(file.name, file.size, newName, blob.size, URL.createObjectURL(blob));
+
+                    singleButton.textContent = 'Done!';
+                    singleButton.classList.remove('bg-blue-100', 'text-blue-600');
+                    singleButton.classList.add('bg-green-100', 'text-green-600');
+
+                    // Re-enable button after a short delay
+                    setTimeout(() => {
+                        singleButton.textContent = originalText;
+                        singleButton.disabled = false;
+                        singleButton.classList.remove('bg-green-100', 'text-green-600');
+                        singleButton.classList.add('bg-blue-100', 'text-blue-600');
+                    }, 2000);
+
+                    loadJSZipScript(); // Ensure ZIP script is loaded
+
+                } catch (error) {
+                    console.error('Single conversion error:', error);
+                    alertUser(`Failed to convert ${file.name}. Check console.`);
+                    singleButton.textContent = 'Failed';
+                    singleButton.classList.remove('bg-blue-100', 'text-blue-600');
+                    singleButton.classList.add('bg-red-100', 'text-red-600');
+                    singleButton.disabled = false;
+                }
+            }
+
+
+            /**
+             * Converts all selected images in batch mode.
+             */
+            async function startBatchConversion() {
+                if (selectedFiles.length === 0) {
+                    alertUser('Please select images first.');
+                    return;
+                }
+
+                // Reset UI for new batch run
+                resultsArea.innerHTML = '';
+                initialMessage.classList.add('hidden');
+                statusArea.classList.remove('hidden');
+                convertButton.disabled = true;
+                downloadAllButton.classList.add('hidden');
+                previewArea.classList.add('hidden'); // Hide preview area during processing
+
+                window.processedFiles = [];
+                let errorCount = 0;
+
+                const targetMimeType = getSelectedFormat();
+                const quality = parseInt(qualitySlider.value, 10);
+                const targetExtension = targetMimeType.split('/')[1].replace('jpeg', 'jpg');
+
+                for (let i = 0; i < selectedFiles.length; i++) {
+                    const file = selectedFiles[i];
+                    const originalName = file.name;
+                    const originalSize = file.size;
+
+                    // Update progress
+                    const progress = Math.round(((i + 1) / selectedFiles.length) * 100);
+                    progressBar.style.width = `${progress}%`;
+                    progressIndicator.textContent = `${progress}%`;
+                    processingText.textContent = `Processing: ${i + 1} of ${selectedFiles.length} (${originalName})`;
+
+                    try {
+                        const blob = await processImage(file, targetMimeType, quality);
+
+                        const newName = originalName.replace(/\.[^/.]+$/, "") + '.' + targetExtension;
+
+                        // Store for ZIP download
+                        window.processedFiles.push({ name: newName, blob: blob, originalName: originalName });
+
+                        // Display result in UI
+                        displayResult(originalName, originalSize, newName, blob.size, URL.createObjectURL(blob));
+
+                    } catch (error) {
+                        console.error('Processing error:', error);
+                        errorCount++;
+                        displayError(originalName, error.message);
+                    }
+                }
+
+                // Final status update
+                progressBar.style.width = '100%';
+                processingText.textContent = `Batch conversion complete. ${selectedFiles.length - errorCount} successful, ${errorCount} failed.`;
+                convertButton.disabled = false;
+
+                if (window.processedFiles.length > 0) {
+                    downloadAllButton.classList.remove('hidden');
+                    loadJSZipScript(); // Ensure JSZip is loaded if files exist
+                }
+            }
+
+            // --- Result Display Functions ---
+
+            /**
+             * Displays the processing result (including the new preview).
+             */
+            function displayResult(originalName, originalSize, newName, newSize, blobUrl) {
+                const sizeDiff = originalSize - newSize;
+                const percentage = originalSize > 0 ? Math.round((sizeDiff / originalSize) * 100) : 0;
+                const extension = newName.split('.').pop().toUpperCase();
+
+                let sizeColor = 'text-green-600';
+                let sizeText = `${(sizeDiff / 1024).toFixed(2)} KB saved (${percentage}%)`;
+                if (sizeDiff < 0) {
+                    sizeColor = 'text-red-600';
+                    sizeText = `Size increased by ${(-sizeDiff / 1024).toFixed(2)} KB (${-percentage}%)`;
+                } else if (sizeDiff === 0) {
+                    sizeColor = 'text-gray-500';
+                    sizeText = 'No size change';
+                }
+
+                // Create a unique ID or use the original filename for easy lookup
+                const resultId = `result-${originalName.replace(/[^a-zA-Z0-9]/g, '-')}`;
+                let resultItem = document.getElementById(resultId);
+
+                if (!resultItem) {
+                    resultItem = document.createElement('div');
+                    resultItem.id = resultId;
+                    resultItem.className = 'flex flex-col sm:flex-row justify-between items-center bg-gray-50 p-4 rounded-xl shadow-sm border border-gray-200 transition-shadow duration-200';
+                    resultsArea.prepend(resultItem); // Add new results to the top
+                }
+
+                // Update content (retains download link and preview)
+                resultItem.innerHTML = `
+                <div class="flex-grow mb-2 sm:mb-0">
+                    <p class="font-semibold text-gray-800 break-words">New File: ${newName}</p>
+                    <p class="text-xs text-gray-500">Original File: ${originalName} (${(originalSize / 1024).toFixed(2)} KB)</p>
+                    <p class="text-xs text-gray-500">New Size: ${(newSize / 1024).toFixed(2)} KB</p>
+                    <p class="text-sm ${sizeColor} font-medium">${sizeText}</p>
+                </div>
+
+                <div class="flex items-center space-x-3 mt-3 sm:mt-0">
+                    <!-- Dynamic Download Button -->
+                    <a href="${blobUrl}" download="${newName}"
+                       class="download-link py-1.5 px-3 bg-blue-600 text-white text-sm font-medium rounded-full hover:bg-blue-700 transition-colors duration-150 text-center cursor-pointer flex-shrink-0"
+                       onclick="this.classList.remove('bg-blue-600', 'hover:bg-blue-700'); this.classList.add('bg-green-700', 'hover:bg-green-800'); this.textContent='Downloaded';">
+                        Download ${extension}
+                    </a>
+
+                    <!-- NEW: Processed Image Preview -->
+                    <div class="h-10 w-10 overflow-hidden rounded-lg border-2 border-white shadow-md flex-shrink-0">
+                        <img src="${blobUrl}" alt="${newName} preview" class="h-full w-full object-cover">
+                    </div>
+                </div>
+            `;
+            }
+
+            function displayError(originalName, message) {
+                const errorItem = document.createElement('div');
+                errorItem.className = 'bg-red-50 p-3 rounded-lg border border-red-200';
+                errorItem.innerHTML = `
+                <p class="font-semibold text-red-700">Failed: ${originalName}</p>
+                <p class="text-sm text-red-500">Error: ${message}</p>
+            `;
+                resultsArea.prepend(errorItem);
+            }
+
+            function alertUser(message) {
+                const messageBox = document.createElement('div');
+                messageBox.className = 'fixed inset-x-0 top-0 mx-auto max-w-md mt-4 bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded-md shadow-lg z-50';
+                messageBox.textContent = message;
+                document.body.appendChild(messageBox);
+                setTimeout(() => messageBox.remove(), 4000); // Remove after 4 seconds
+            }
+
+            // --- ZIP Download Logic (Requires JSZip) ---
+
+            function loadJSZipScript() {
+                if (typeof JSZip === 'undefined' && !document.querySelector('#jszip-script')) {
+                    const script = document.createElement('script');
+                    script.id = 'jszip-script';
+                    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+                    script.onload = () => {
+                        console.log('JSZip loaded successfully.');
+                        downloadAllButton.disabled = false;
+                    };
+                    script.onerror = () => {
+                        console.error('Failed to load JSZip.');
+                        downloadAllButton.textContent = 'Error loading download utility.';
+                    };
+                    document.head.appendChild(script);
+                } else if (typeof JSZip !== 'undefined') {
+                    downloadAllButton.disabled = false;
+                } else {
+                    downloadAllButton.textContent = 'Loading ZIP utility...';
+                }
+            }
+
+            async function downloadAll() {
+                if (typeof JSZip === 'undefined' || window.processedFiles.length === 0) {
+                    alertUser('ZIP utility not ready or no files processed.');
+                    return;
+                }
+
+                const zip = new JSZip();
+                const folder = zip.folder("optimized_images");
+
+                // Add all processed files to the zip folder
+                window.processedFiles.forEach(file => {
+                    folder.file(file.name, file.blob, { binary: true });
+                });
+
+                downloadAllButton.textContent = 'Creating ZIP...';
+                downloadAllButton.disabled = true;
+
+                try {
+                    const content = await zip.generateAsync({ type: "blob" });
+
+                    const zipFilename = `optimized_batch_${Date.now()}.zip`;
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(content);
+                    link.download = zipFilename;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+
+                    alertUser('Download started!');
+                } catch (error) {
+                    console.error('ZIP generation failed:', error);
+                    alertUser('Failed to create ZIP file.');
+                } finally {
+                    downloadAllButton.textContent = 'Download All Processed Images (.zip)';
+                    downloadAllButton.disabled = false;
+                }
+            }
+
+            // Initial setup
+            updateQualityControl(getSelectedFormat());
+        });
+    </script>
+</body>
+
+</html>
